@@ -31,7 +31,7 @@ def predict():
             print(data)
 
     response = requests.get(data)
-    img = Image.open(BytesIO(response.content))
+    img = Image.open(BytesIO(response.content)).convert('RGB')
     preprocessFn = transforms.Compose(
         [transforms.Resize(256), 
         transforms.CenterCrop(224), 
