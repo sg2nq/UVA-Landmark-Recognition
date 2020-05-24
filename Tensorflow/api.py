@@ -6,7 +6,7 @@ from tensorflow import keras
 from tensorflow.keras.models import Model
 
 import numpy as np
-from tensorflow.keras.applications.resnet import preprocess_input
+from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
 
 from PIL import Image
 import requests
@@ -44,3 +44,5 @@ def predict():
     return jsonify({"prediction": class_names[results.argmax(axis=-1)[0]]})
 # start the flask app, allow remote connections
 app.run(host='0.0.0.0', port = 8080)
+
+# Note: For the purposes of this demo, MobileNet V2 was used as the base model as its lightweight (18MB) and meets github's filesize limit.
