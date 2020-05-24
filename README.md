@@ -1,7 +1,8 @@
 # UVaLandmarkRecognitionTransferLearning
 
-## Transfer Learning using Tensorflow 2.0 and Keras
+# Hosting A Model Trained using Transfer Learning with Tensorflow 2.0 and Keras
 
+## Part 1 - Transfer Learning
 ### Import tensorflow 2.0
 ```try:
   # Use the %tensorflow_version magic if in colab.
@@ -20,7 +21,7 @@ To download and unzip simply make a wget request to the dataset and unzip the do
 !wget -O "dataset.zip" "https://www.dropbox.com/s/qdptwne9j43z70d/dataset_split.zip"
 !unzip "/content/dataset.zip"
 ```
-Using Image data generator and flow_from_directory from tf.keras.preprocessing, import the dataset (and repeat for the test set):
+Using Image data generator and flow_from_directory from tf.keras.preprocessing, import the dataset (and repeat for the validation set):
 ```
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras.applications.xception import preprocess_input
@@ -35,52 +36,155 @@ train_generator=train_datagen.flow_from_directory('/content/train',
 ```
 ### Load the pretrained model of choice
 Choose a model from the following link: https://www.tensorflow.org/api_docs/python/tf/keras/applications
-In the sample code, we chose to use the Xception model. 
+In the sample code, we chose to use the Inception V3 model. 
 First, we need to import the different objects we are going to need:
 ```
-from tensorflow.keras.layers import Dense,GlobalAveragePooling2D
-from tensorflow.keras.applications import ResNet50
-from tensorflow.keras.preprocessing import image
-from tensorflow.keras.applications.xception import preprocess_input
+import pandas as pd
+import numpy as np
+import os
+from tensorflow import keras
+import matplotlib.pyplot as plt
+from tensorflow.keras.applications.inception_v3 import preprocess_input
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
-from tensorflow.keras.models import Model
-from tensorflow.keras.optimizers import SGD
 ```
 
-Load the model, add a Global Average Pooling layer to the output, followed by 2 Densely conneced networks, one with activation relu and the other with softmax. The softmax layer will give the actual output.
+Load the model, add a Global Average Pooling layer to the output, followed by a Densely conneced network, with softmax activation. The softmax layer will give the prediction output. The first step of the process only trains the added layer, which is the dense layer that was added at the end. Thus, we initially keep the base layer frozen by setting all layers in the base untrainable.
+
 ```
-base_model=Xception(weights='imagenet',include_top=False)
+base_model=InceptionV3(weights='imagenet',include_top=False)
+for layer in base_model.layers:
+    layer.trainable = False
+
 x=base_model.output
 x=GlobalAveragePooling2D()(x)
-x=Dense(1024,activation='relu')(x)
-preds=Dense(18,activation='softmax')(x) #final layer with softmax activation
+preds=Dense(18,activation='softmax')(x)
+
 model=Model(inputs=base_model.input,outputs=preds)
 ```
 
 ### Compile, Train, and Test the model
 Compile the model with the settings of your choice, for the optimizer, loss and metrics. Then, use model.fit to train it.
+
+We chose to use the Stochastic Gradient Descent optimzier with a learning rate of 0.1, momentum of 0.9, and decay of 0.01 for the first step. We chose 10 epochs for the training as after 8 there is a mild decrease in accuracy, and this verifies that we have achieved the best results possible with the given hyperparameters.
+
+The step size is the number of batches in the dataset.
 ```
-model.compile(optimizer='SGD',loss='categorical_crossentropy',metrics=['accuracy'])
-model.fit(train_generator, steps_per_epoch=train_generator.n//train_generator.batch_size, epochs=10)
+from tensorflow.keras import optimizers
+
+sgd = optimizers.SGD(lr=0.1, momentum=0.9, decay = 0.01)
+model.compile(optimizer=sgd,loss='categorical_crossentropy',metrics=['accuracy'])
+
+step_size_train=train_generator.n//train_generator.batch_size
+val_step_size=val_generator.n//val_generator.batch_size
+
+model.fit(train_generator, steps_per_epoch=step_size_train,
+                    validation_data=val_generator, 
+                    validation_steps = val_step_size,
+                    epochs=10)
 ```
-To test the model, call model.evaluate and it will return the result based on the metrics chosen during compilation:
+The second step retrains the entire model, but at a slower rate so as to not void the pre-trained model. Thus the learning rate was reduced to 0.001 and the decay to 0.0001.
 ```
-model.evaluate(test_generator)
+for layer in model.layers:
+  layer.trainable = True
+
+sgd = optimizers.SGD(lr=0.001, momentum=0.9, decay = 0.0001, nesterov = True)
+model.compile(optimizer=sgd,loss='categorical_crossentropy',metrics=['accuracy'])
+step_size_train=train_generator.n//train_generator.batch_size
+val_step_size=val_generator.n//val_generator.batch_size
+model.fit(train_generator, steps_per_epoch=step_size_train,
+                    validation_data=val_generator, 
+                    validation_steps = val_step_size,
+                    epochs=10)
 ```
 ### Export the model
 Save the model using model.save. Make sure that the model is an object of class tensorflow.keras.models.Model.
 ```
-model.save('model_name.h5')  
-```
-### Convert the model into a tensorflow JS model
-First, you need to install the command line tool for tensorflowjs:
-```
-!pip install tensorflowjs
-```
-Now, use tensorflowjs_converter to convert the keras model to a tensorflow js ready folder:
-```
-!tensorflowjs_converter --input_format keras /content/model_name.h5 /content/output_folder_name
+model.save('LandmarkRecognizer.h5')  
 ```
 
-### Final Steps
-Once you have the folder created, download and host the folder to a service where you can use a file path. An instance of such a cloud service is Github. The file path system, which does not function with Google Drive, Box, and DropBox, is essential, as tensorflowjs only takes in the URL to the json file created, and the binary files are pulled in subsequent request using the file location. 
+## Part 2 - Hosting the Model Using Flask, Google Cloud Platform, Docker, and Kubernetes
+
+### Server
+After saving the model, we created a Flask server in Python.
+
+To do so, first we need to install all dependencies (Insturctions for linux below):
+Install python3.7, pip, and python3 setuptools for your machine. Ensure that pip is at its latest version. Install Flask, Tensorflow, Pillow and requests.
+Flask is used for making the server, tensorflow is required to import the model and make the prediction, Pillow enables us to load the image, and requests is used to download the image from the internet.
+```
+apt-get update
+apt-get install -y python3.7
+apt-get install -y python3-pip
+apt-get install -y python3-setuptools
+python3.7 -m pip install --upgrade pip
+python3.7 -m pip install flask
+python3.7 -m pip install tensorflow
+python3.7 -m pip install Pillow
+python3.7 -m pip install requests
+```
+Once all the dependencies are downloaded without errors, we can make the Flask API. First import all the required classes from the liraries that were installed.
+```
+from flask import Flask, request, jsonify
+import tensorflow as tf
+import flask
+
+from tensorflow import keras
+from tensorflow.keras.models import Model
+
+import numpy as np
+from tensorflow.keras.applications.resnet import preprocess_input
+
+from PIL import Image
+import requests
+from io import BytesIO
+
+from tensorflow.keras.preprocessing import image
+import os
+
+```
+
+Initialize the flask app, load the model and set the app route to https://<link>/predict
+
+```
+app = Flask(__name__)
+file_path = os.path.dirname(os.path.abspath(__file__))
+
+model = tf.keras.models.load_model(os.path.join(file_path, 'LandmarkRecognizer.h5'))
+@app.route('/predict', methods=['GET'])
+
+```
+The first part of the predict function gets the query string from the http request, and stores it in the variable data.
+```
+def predict():
+    if request.method == 'GET':
+        data = flask.request.query_string[4:]
+        if (data == None):
+            return flask.jsonify({"Error": "Missing params"})
+        # if parameters are found, echo the msg parameter 
+        if (data != None):
+            print(data)
+```
+
+The second part of the predict function downloads the image from the link provided and pre-processes it in the same manner as training time. Then, it calls the model to make the prediction, and returns the result in JSON format.
+```
+    response = requests.get(data)
+    img = Image.open(BytesIO(response.content))
+    # img = image.load_img(test_file_path, target_size=(224, 224))
+    x = image.img_to_array(img)
+    x = np.expand_dims(x, axis=0)
+    x = preprocess_input(x)
+    class_names = ['AcademicalVillage', 'AldermanLibrary', 'AlumniHall', 'AquaticFitnessCenter', 
+    'BravoHall', 'BrooksHall', 'ClarkHall', 'MadisonHall', 'MinorHall', 'NewCabellHall', 
+    'NewcombHall', 'OldCabellHall', 'OlssonHall', 'RiceHall', 'Rotunda', 'ScottStadium', 
+    'ThorntonHall', 'UniversityChapel']
+    results = model.predict(x)
+    return jsonify({"prediction": class_names[results.argmax(axis=-1)[0]]})
+# start the flask app, allow remote connections
+app.run(host='0.0.0.0', port = 8080)
+```
+You can test the API by locally running the flask server. Simply call `python3 api.py`. This will create a local server, which can be accessed at:
+```http://0.0.0.0:8080/predict?msg=```
+Insert the URL to the image after "msg="
+
+### Docker
+
+
