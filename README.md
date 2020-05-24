@@ -185,6 +185,54 @@ You can test the API by locally running the flask server. Simply call `python3 a
 ```http://0.0.0.0:8080/predict?msg=```
 Insert the URL to the image after "msg="
 
-### Docker
+### Containerize and Upload to GCP Kubernetes
+To create the docker image, we first make the docker file. Simply create file called `Dockerfile` with the following contents:
+```
+FROM ubuntu:latest
+MAINTAINER Sid  
+RUN apt-get update \  
+  && apt-get install -y python3.7 \
+  && apt-get install -y python3-pip \
+  && apt-get install -y python3-setuptools \
+  && cd /usr/local/bin \  
+  && ln -s /usr/bin/python3.7 python \  
+  && python3.7 -m pip install --upgrade pip \
+  && python3.7 -m pip install flask \
+  && python3.7 -m pip install tensorflow \
+  && python3.7 -m pip install Pillow \
+  && python3.7 -m pip install requests
 
 
+COPY api.py api.py
+COPY LandmarkRecognizer.h5 LandmarkRecognizer.h5
+ENTRYPOINT ["python3.7","api.py"]
+```
+This will take care of importing all the needed libraries into the docker image, as well as the api file and the model.
+
+Finally, create the docker image and upload the image to GCP. Follow the instructions here:
+[https://cloud.google.com/kubernetes-engine/docs/tutorials/hello-app](https://cloud.google.com/kubernetes-engine/docs/tutorials/hello-app)
+Brief overview of the steps, but full instructions should be read to avoid errors:
+Run the following command inside the folder containing the docker file
+```docker build -t gcr.io/uva-landmark-images/ml-model:v<Current Version> .```
+
+Configure docker
+```gcloud auth configure-docker```
+
+Test the docker locally
+```
+docker push gcr.io/uva-landmark-images/ml-model:v<Current Version>
+docker run --rm -p 8080:8080 gcr.io/uva-landmark-images/ml-model:v<Current Version>
+```
+Follow the same URL as for flask to test it locally.
+
+Update the kubernetes image to the one created:
+```
+kubectl set image deployment/ml-web-model ml-model=gcr.io/uva-landmark-images/ml-model:v<Current Version>
+```
+
+Set of details for Kubernetes Cluster:
+Project ID: uva-landmark-images
+Cluster name: ml-cluster
+Workload name: ml-web-model
+Container name: ml-model
+Endpoint: 35.231.33.254:80
