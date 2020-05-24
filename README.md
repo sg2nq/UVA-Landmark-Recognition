@@ -1,9 +1,9 @@
 # UVaLandmarkRecognitionTransferLearning
 
-# Hosting A Model Trained using Transfer Learning with Tensorflow 2.0 and Keras
+## Hosting A Model Trained using Transfer Learning with Tensorflow 2.0 and Keras ##
 
-## Part 1 - Transfer Learning
-### Import tensorflow 2.0
+### Part 1 - Transfer Learning 
+#### Import tensorflow 2.0
 ```try:
   # Use the %tensorflow_version magic if in colab.
   %tensorflow_version 2.x
@@ -13,7 +13,7 @@ except Exception:
 import tensorflow as tf
 ```
 
-### Download, Unzip and import the dataset
+#### Download, Unzip and import the dataset
 Ideally, the dataset should have files in ./train  and ./test to make importing the files easier. Alternately, different methods can be used to import the images rather than flow_from_directory
 
 To download and unzip simply make a wget request to the dataset and unzip the downloaded file using command line(!):
@@ -34,7 +34,7 @@ train_generator=train_datagen.flow_from_directory('/content/train',
                                                  class_mode='categorical',
                                                  shuffle=True)
 ```
-### Load the pretrained model of choice
+#### Load the pretrained model of choice
 Choose a model from the following link: https://www.tensorflow.org/api_docs/python/tf/keras/applications
 In the sample code, we chose to use the Inception V3 model. 
 First, we need to import the different objects we are going to need:
@@ -62,7 +62,7 @@ preds=Dense(18,activation='softmax')(x)
 model=Model(inputs=base_model.input,outputs=preds)
 ```
 
-### Compile, Train, and Test the model
+#### Compile, Train, and Test the model
 Compile the model with the settings of your choice, for the optimizer, loss and metrics. Then, use model.fit to train it.
 
 We chose to use the Stochastic Gradient Descent optimzier with a learning rate of 0.1, momentum of 0.9, and decay of 0.01 for the first step. We chose 10 epochs for the training as after 8 there is a mild decrease in accuracy, and this verifies that we have achieved the best results possible with the given hyperparameters.
@@ -96,15 +96,15 @@ model.fit(train_generator, steps_per_epoch=step_size_train,
                     validation_steps = val_step_size,
                     epochs=10)
 ```
-### Export the model
+#### Export the model
 Save the model using model.save. Make sure that the model is an object of class tensorflow.keras.models.Model.
 ```
 model.save('LandmarkRecognizer.h5')  
 ```
 
-## Part 2 - Hosting the Model Using Flask, Google Cloud Platform, Docker, and Kubernetes
+### Part 2 - Hosting the Model Using Flask, Google Cloud Platform, Docker, and Kubernetes
 
-### Server
+#### Server
 After saving the model, we created a Flask server in Python.
 
 To do so, first we need to install all dependencies (Insturctions for linux below):
@@ -185,7 +185,7 @@ You can test the API by locally running the flask server. Simply call `python3 a
 ```http://0.0.0.0:8080/predict?msg=```
 Insert the URL to the image after "msg="
 
-### Containerize and Upload to GCP Kubernetes
+#### Containerize and Upload to GCP Kubernetes
 To create the docker image, we first make the docker file. Simply create file called `Dockerfile` with the following contents:
 ```
 FROM ubuntu:latest
