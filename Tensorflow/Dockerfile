@@ -13,7 +13,7 @@ RUN apt-get update \
   && python3.7 -m pip install requests
 
 
-COPY api_test.py api_test.py
-COPY model.h5 model.h5
-ENTRYPOINT ["python3.7","api_test.py"]
+COPY api.py api.py
+COPY LandmarkRecognizer.h5 LandmarkRecognizer.h5
+ENTRYPOINT ["python3.7","api.py"]
 
