@@ -16,9 +16,9 @@ from tensorflow.keras.preprocessing import image
 import os
 
 app = Flask(__name__)
-file_path = os.path.dirname(os.path.abspath(__file__))
+cwd_path = os.path.dirname(os.path.abspath(__file__))
 
-model = tf.keras.models.load_model(os.path.join(file_path, 'model.h5'))
+model = tf.keras.models.load_model(os.path.join(cwd_path, 'LandmarkRecognizer.h5'))
 @app.route('/predict', methods=['GET'])
 
 
@@ -33,12 +33,11 @@ def predict():
 
     response = requests.get(data)
     img = Image.open(BytesIO(response.content))
-    # img = image.load_img(test_file_path, target_size=(224, 224))
     x = image.img_to_array(img)
     x = np.expand_dims(x, axis=0)
     x = preprocess_input(x)
     class_names = ['AcademicalVillage', 'AldermanLibrary', 'AlumniHall', 'AquaticFitnessCenter', 
-    'BravoHall', 'BrooksHall', 'ClarkHall', 'MadisonHall', 'MinorHall', 'NewCabellHall', 
+    'BararoHall', 'BrooksHall', 'ClarkHall', 'MadisonHall', 'MinorHall', 'NewCabellHall', 
     'NewcombHall', 'OldCabellHall', 'OlssonHall', 'RiceHall', 'Rotunda', 'ScottStadium', 
     'ThorntonHall', 'UniversityChapel']
     results = model.predict(x)
