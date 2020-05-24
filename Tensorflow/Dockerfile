@@ -12,7 +12,6 @@ RUN apt-get update \
   && python3.7 -m pip install Pillow \
   && python3.7 -m pip install requests
 
-RUN python3.7 -m pip show tensorflow
 
 COPY api_test.py api_test.py
 COPY model.h5 model.h5
