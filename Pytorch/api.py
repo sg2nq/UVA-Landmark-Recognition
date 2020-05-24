@@ -16,7 +16,7 @@ cwd_path = os.path.dirname(os.path.abspath(__file__))
 device = torch.device("cpu")
 model = torch.load(os.path.join(cwd_path, 'uvalandmarkmodel.pth'), map_location=torch.device('cpu'))
 model = model.to(device)
-class_names = ['AcademicalVillage', 'AldermanLibrary', 'AlumniHall', 'AquaticFitnessCenter', 'BravoHall', 'BrooksHall', 'ClarkHall', 'JeffersonHall', 'MadisonHall', 'MinorHall', 'NewCabellHall', 'NewcombHall', 'OldCabellHall', 'OlssonHall', 'PavillionVII', 'RiceHall', 'Rotunda', 'ScottStadium', 'ThorntonHall', 'UVAHistoricalLandmarkRecognitionAppBackgroundcopypng', 'UniversityChapel']
+class_names = ['AcademicalVillage', 'AldermanLibrary', 'AlumniHall', 'AquaticFitnessCenter', 'BararoHall', 'BrooksHall', 'ClarkHall', 'JeffersonHall', 'MadisonHall', 'MinorHall', 'NewCabellHall', 'NewcombHall', 'OldCabellHall', 'OlssonHall', 'PavillionVII', 'RiceHall', 'Rotunda', 'ScottStadium', 'ThorntonHall', 'UVAHistoricalLandmarkRecognitionAppBackgroundcopypng', 'UniversityChapel']
 
 @app.route('/predict', methods=['GET'])
 
